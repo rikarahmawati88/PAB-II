@@ -30,8 +30,8 @@ class MyHomePage extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Daftar Karyawan'),
       ),
-      body: const Center(
-        child: Text('Hello World'),
+      body: Center(
+        child: Text('Data Karyawan akan ditampilkan disini'),
       ),
     );
   }
