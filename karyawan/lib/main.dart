@@ -28,6 +28,7 @@ class MyHomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        foregroundColor: Colors.white,
         title: const Text('Daftar Karyawan'),
       ),
       body: Center(
