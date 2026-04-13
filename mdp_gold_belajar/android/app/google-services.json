@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "598684071371",
+    "firebase_url": "https://mdpgoldbelajar-default-rtdb.firebaseio.com",
+    "project_id": "mdpgoldbelajar",
+    "storage_bucket": "mdpgoldbelajar.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:598684071371:android:750a799241492f4e6bb24e",
+        "android_client_info": {
+          "package_name": "com.example.mdp_gold_belajar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0EjvuriKd_h0Ktc55XlbUBVOYAq1LDPA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
