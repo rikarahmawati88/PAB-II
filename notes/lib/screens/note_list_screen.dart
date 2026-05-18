@@ -1,9 +1,11 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 import '../widgets/note_dialog.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../services/fcm_service.dart';
 
 class NoteListScreen extends StatefulWidget {
   const NoteListScreen({super.key});
@@ -14,6 +16,7 @@ class NoteListScreen extends StatefulWidget {
 
 class _NoteListScreenState extends State<NoteListScreen> {
   final NoteService _noteService = NoteService();
+  final FcmService _fcmService = FcmService(); // tambahan
 
   /// Show dialog to add a new note
   Future<void> _addNote() async {
@@ -25,6 +28,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
     if (note != null) {
       try {
         await _noteService.addNote(note);
+
+        // Send notification via REST API
+      await _fcmService.sendNoteNotification(
+      title: note.title,
+      description: note.description,
+    );
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -158,6 +168,25 @@ class _NoteListScreenState extends State<NoteListScreen> {
             Text('My Notes'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy_all),
+            tooltip: 'Copy FCM Token',
+            onPressed: () async {
+              final token = await FirebaseMessaging.instance.getToken();
+              if (token != null) {
+                await Clipboard.setData(ClipboardData(text: token));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('FCM Token copied to clipboard')),
+                  );
+                }
+                debugPrint('FCM Token: $token');
+              }
+            },
+          ),
+        ],
+
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 0,
