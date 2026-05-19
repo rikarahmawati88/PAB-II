@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/fcm_service.dart';
 
 class SubscribeScreen extends StatefulWidget {
-  const SubscribeScreen({Key? key}) : super(key: key);
+  const SubscribeScreen({super.key});
 
   @override
   State<SubscribeScreen> createState() => _SubscribeScreenState();
