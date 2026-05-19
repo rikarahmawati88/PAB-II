@@ -6,6 +6,7 @@ import '../widgets/note_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/fcm_service.dart';
+import 'subscribe_screen.dart';
 
 class NoteListScreen extends StatefulWidget {
   const NoteListScreen({super.key});
@@ -169,6 +170,16 @@ class _NoteListScreenState extends State<NoteListScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.subscriptions),
+            tooltip: 'Langganan Topik',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SubscribeScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.copy_all),
             tooltip: 'Copy FCM Token',

@@ -1,11 +1,11 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/note.dart';
+import '../services/note_service.dart';
 
 class NoteDialog extends StatefulWidget {
-  final Note? note; // null = add mode, non-null = edit mode
+  final Note? note; // null jika mode tambah, berisi data jika mode edit
 
   const NoteDialog({super.key, this.note});
 
@@ -15,19 +15,23 @@ class NoteDialog extends StatefulWidget {
 
 class _NoteDialogState extends State<NoteDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _titleController;
-  late TextEditingController _descriptionController;
-  String? _imageBase64;
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final NoteService _noteService = NoteService();
   final ImagePicker _picker = ImagePicker();
+
+  String? _imageBase64;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.note?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.note?.description ?? '');
-    _imageBase64 = widget.note?.imageBase64;
+    // Jika mode edit, isi form dengan data yang sudah ada
+    if (widget.note != null) {
+      _titleController.text = widget.note!.title;
+      _descriptionController.text = widget.note!.description;
+      _imageBase64 = widget.note!.imageBase64;
+    }
   }
 
   @override
@@ -37,89 +41,119 @@ class _NoteDialogState extends State<NoteDialog> {
     super.dispose();
   }
 
-  /// Pick an image from gallery and convert to base64
+  // Fungsi untuk memilih gambar dan konversi ke base64
   Future<void> _pickImage() async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 800,
         maxHeight: 800,
-        imageQuality: 70,
+        imageQuality: 50,
       );
 
       if (pickedFile != null) {
-        setState(() => _isLoading = true);
-
         final bytes = await pickedFile.readAsBytes();
-        final base64String = base64Encode(bytes);
-
         setState(() {
-          _imageBase64 = base64String;
-          _isLoading = false;
+          _imageBase64 = base64Encode(bytes);
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memilih gambar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memilih gambar: $e')));
       }
     }
   }
 
-  /// Remove the currently selected image
-  void _removeImage() {
-    setState(() => _imageBase64 = null);
+  // Fungsi untuk menyimpan note (tambah atau update)
+  Future<void> _saveNote() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final note = Note(
+          id: widget.note?.id,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          imageBase64: _imageBase64,
+          createdAt: widget.note?.createdAt ?? DateTime.now(),
+        );
+
+        if (widget.note == null) {
+          // Mode tambah
+          await _noteService.addNote(note);
+        } else {
+          // Mode edit
+          await _noteService.updateNote(note);
+        }
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                widget.note == null
+                    ? 'Note berhasil ditambahkan'
+                    : 'Note berhasil diperbarui',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.note != null;
+    final isEdit = widget.note != null;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Dialog Title
-                Row(
-                  children: [
-                    Icon(
-                      isEditing ? Icons.edit_note : Icons.note_add,
-                      color: Colors.deepPurple,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isEditing ? 'Edit Note' : 'Add Note',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                // Header
+                Text(
+                  isEdit ? 'Edit Note' : 'Add Note',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
 
-                // Title Field
+                // Input Title
                 TextFormField(
                   controller: _titleController,
                   decoration: InputDecoration(
                     labelText: 'Title',
-                    prefixIcon: const Icon(Icons.title),
+                    hintText: 'Masukkan judul note',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
+                    prefixIcon: const Icon(Icons.title),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -130,21 +164,18 @@ class _NoteDialogState extends State<NoteDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Description Field
+                // Input Description
                 TextFormField(
                   controller: _descriptionController,
-                  maxLines: 4,
+                  maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Description',
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(bottom: 60),
-                      child: Icon(Icons.description),
-                    ),
+                    hintText: 'Masukkan deskripsi note',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
+                    prefixIcon: const Icon(Icons.description),
+                    alignLabelWithHint: true,
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -155,123 +186,96 @@ class _NoteDialogState extends State<NoteDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Image Section
-                if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else if (_imageBase64 != null)
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(
-                          base64Decode(_imageBase64!),
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: _removeImage,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  InkWell(
-                    onTap: _pickImage,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 120,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 2,
-                          style: BorderStyle.solid,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.grey.shade50,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_photo_alternate_outlined,
-                            size: 40,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap to add image',
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
+                // Image Picker
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[400]!),
                     ),
+                    child: _imageBase64 != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              base64Decode(_imageBase64!),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            ),
+                          )
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Tap untuk memilih gambar',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
                   ),
+                ),
 
+                // Tombol hapus gambar jika sudah ada gambar
                 if (_imageBase64 != null) ...[
                   const SizedBox(height: 8),
                   TextButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.swap_horiz),
-                    label: const Text('Change Image'),
+                    onPressed: () {
+                      setState(() {
+                        _imageBase64 = null;
+                      });
+                    },
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    label: const Text(
+                      'Hapus Gambar',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ],
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // Action Buttons
+                // Tombol Simpan & Batal
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Batal'),
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          final note = Note(
-                            id: widget.note?.id,
-                            title: _titleController.text.trim(),
-                            description: _descriptionController.text.trim(),
-                            imageBase64: _imageBase64,
-                            createdAt: widget.note?.createdAt ?? DateTime.now(),
-                          );
-                          Navigator.of(context).pop(note);
-                        }
-                      },
-                      icon: Icon(isEditing ? Icons.save : Icons.add),
-                      label: Text(isEditing ? 'Save' : 'Add'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _saveNote,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(isEdit ? 'Update' : 'Simpan'),
                       ),
                     ),
                   ],
