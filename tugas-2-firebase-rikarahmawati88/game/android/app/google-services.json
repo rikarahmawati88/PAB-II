@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "435742237842",
+    "firebase_url": "https://game-29839-default-rtdb.firebaseio.com",
+    "project_id": "game-29839",
+    "storage_bucket": "game-29839.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:435742237842:android:90ef7ced6f13fac144b24b",
+        "android_client_info": {
+          "package_name": "com.example.game"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZcrnQ0OwJpCAZHcp9zQ4nJ5gHA5lIMrs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

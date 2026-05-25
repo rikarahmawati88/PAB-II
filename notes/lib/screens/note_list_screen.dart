@@ -26,7 +26,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
   Future<void> _addNote() async {
     final note = await showDialog<Note>( 
 
-      
       context: context,
       builder: (context) => const NoteDialog(),
     );
