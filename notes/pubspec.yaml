@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:   # ← paket localization bawaan Flutter
+    sdk: flutter
+  intl: any                # ← paket format teks internasional
   firebase_core: ^4.7.0
   cloud_firestore: ^6.3.0
   image_picker: ^1.2.1
@@ -17,10 +20,12 @@ dependencies:
   http: ^1.6.0
   shared_preferences: ^2.5.5
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
 
 flutter:
+  generate: true           # ← aktifkan auto-generate dari ARB
   uses-material-design: true

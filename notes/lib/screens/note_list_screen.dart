@@ -6,10 +6,13 @@ import '../widgets/note_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/fcm_service.dart';
+import '../l10n/app_localizations.dart';
 import 'subscribe_screen.dart';
 
 class NoteListScreen extends StatefulWidget {
-  const NoteListScreen({super.key});
+  const NoteListScreen({super.key, this.onLocaleChanged});
+
+  final ValueChanged<Locale>? onLocaleChanged;
 
   @override
   State<NoteListScreen> createState() => _NoteListScreenState();
@@ -38,8 +41,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Note berhasil ditambahkan'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.noteAdded),
               backgroundColor: Colors.green,
             ),
           );
@@ -48,7 +51,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Gagal menambahkan note: $e'),
+              content: Text(AppLocalizations.of(context)!.noteAddFailed(e.toString())),
               backgroundColor: Colors.red,
             ),
           );
@@ -69,8 +72,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
         await _noteService.updateNote(updatedNote);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Note berhasil diupdate'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.noteUpdated),
               backgroundColor: Colors.green,
             ),
           );
@@ -79,7 +82,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Gagal mengupdate note: $e'),
+              content: Text(AppLocalizations.of(context)!.noteUpdateFailed(e.toString())),
               backgroundColor: Colors.red,
             ),
           );
@@ -94,12 +97,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Hapus Note'),
-        content: Text('Apakah Anda yakin ingin menghapus "${note.title}"?'),
+        title: Text(AppLocalizations.of(context)!.deleteNote),
+        content: Text(AppLocalizations.of(context)!.deleteConfirm(note.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -107,7 +110,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Hapus'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -118,8 +121,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
         await _noteService.deleteNote(note.id!);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Note berhasil dihapus'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.noteDeleted),
               backgroundColor: Colors.green,
             ),
           );
@@ -128,7 +131,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Gagal menghapus note: $e'),
+              content: Text(AppLocalizations.of(context)!.noteDeleteFailed(e.toString())),
               backgroundColor: Colors.red,
             ),
           );
@@ -162,17 +165,53 @@ class _NoteListScreenState extends State<NoteListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.sticky_note_2, color: Colors.white),
-            SizedBox(width: 8),
-            Text('My Notes'),
+            const Icon(Icons.sticky_note_2, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(AppLocalizations.of(context)!.appTitle),
           ],
         ),
         actions: [
+          PopupMenuButton<Locale>(
+            tooltip: AppLocalizations.of(context)!.language,
+            icon: const Icon(Icons.language),
+            onSelected: (locale) => widget.onLocaleChanged?.call(locale),
+            itemBuilder: (context) {
+              final current = Localizations.localeOf(context).languageCode;
+              return [
+                PopupMenuItem<Locale>(
+                  value: const Locale('id'),
+                  child: Row(
+                    children: [
+                      if (current == 'id')
+                        const Icon(Icons.check, size: 18, color: Colors.deepPurple)
+                      else
+                        const SizedBox(width: 18),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context)!.languageIndonesian),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<Locale>(
+                  value: const Locale('en'),
+                  child: Row(
+                    children: [
+                      if (current == 'en')
+                        const Icon(Icons.check, size: 18, color: Colors.deepPurple)
+                      else
+                        const SizedBox(width: 18),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context)!.languageEnglish),
+                    ],
+                  ),
+                ),
+              ];
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.subscriptions),
-            tooltip: 'Langganan Topik',
+            tooltip: AppLocalizations.of(context)!.subscribeTooltip,
             onPressed: () {
               Navigator.push(
                 context,
@@ -182,14 +221,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.copy_all),
-            tooltip: 'Copy FCM Token',
+            tooltip: AppLocalizations.of(context)!.copyFcmToken,
             onPressed: () async {
               final token = await FirebaseMessaging.instance.getToken();
               if (token != null) {
                 await Clipboard.setData(ClipboardData(text: token));
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('FCM Token copied to clipboard')),
+                    SnackBar(content: Text(AppLocalizations.of(context)!.fcmTokenCopied)),
                   );
                 }
                 debugPrint('FCM Token: $token');
@@ -231,7 +270,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Terjadi kesalahan',
+                      AppLocalizations.of(context)!.errorOccurred,
                       style: TextStyle(
                         fontSize: 18,
                         color: Colors.grey.shade700,
@@ -263,7 +302,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Belum ada catatan',
+                      AppLocalizations.of(context)!.noNotes,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -272,7 +311,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tekan tombol + untuk menambahkan catatan',
+                      AppLocalizations.of(context)!.addNoteHint,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade400,

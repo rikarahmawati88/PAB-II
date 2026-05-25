@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/note_list_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'services/fcm_service.dart';
+
+const String _savedLocaleKey = 'selected_locale';
+
+Future<Locale?> _loadSavedLocale() async {
+  final prefs = await SharedPreferences.getInstance();
+  final languageCode = prefs.getString(_savedLocaleKey);
+  if (languageCode == null || languageCode.isEmpty) return null;
+  return Locale(languageCode);
+}
+
+Future<void> _saveLocale(Locale locale) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_savedLocaleKey, locale.languageCode);
+}
 
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -43,8 +59,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Locale? savedLocale;
+
   try {
     // Inisialisasi Firebase agar seluruh service Firebase dapat digunakan
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -59,14 +77,40 @@ void main() async {
       // Menangkap error khusus saat proses inisialisasi FCM
       debugPrint('Error initializing FCM: $e');
     });
+
+    savedLocale = await _loadSavedLocale();
   } catch (e) {
     // Menangkap error saat proses inisialisasi Firebase
     debugPrint('Error during Firebase initialization: $e');
-  }  runApp(const MainApp());
+  }
+
+  runApp(MainApp(initialLocale: savedLocale));
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MainApp extends StatefulWidget {
+  const MainApp({super.key, this.initialLocale});
+
+  final Locale? initialLocale;
+
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
+  Locale? _locale;
+
+  @override
+  void initState() {
+    super.initState();
+    _locale = widget.initialLocale;
+  }
+
+  Future<void> setLocale(Locale locale) async {
+    await _saveLocale(locale);
+    setState(() {
+      _locale = locale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +121,20 @@ class MainApp extends StatelessWidget {
         colorSchemeSeed: Colors.deepPurple,
         useMaterial3: true,
       ),
-      home: const NoteListScreen(),
+      locale: _locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (_locale != null) return _locale;
+        if (locale == null) return supportedLocales.first;
+        for (final supported in supportedLocales) {
+          if (supported.languageCode == locale.languageCode) {
+            return supported;
+          }
+        }
+        return supportedLocales.first;
+      },
+      home: NoteListScreen(onLocaleChanged: setLocale),
     );
   }
 }
