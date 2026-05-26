@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../l10n/app_localizations.dart';
 import '../services/fcm_service.dart';
 
 class SubscribeScreen extends StatefulWidget {
@@ -12,14 +13,14 @@ class SubscribeScreen extends StatefulWidget {
 class _SubscribeScreenState extends State<SubscribeScreen> {
   final TextEditingController _topicController = TextEditingController();
   final FcmService _fcmService = FcmService();
-  
+
   List<String> _subscribedTopics = [];
   final List<String> _suggestedTopics = [
     'keuangan',
     'berita',
     'olahraga',
     'teknologi',
-    'kesehatan'
+    'kesehatan',
   ];
 
   @override
@@ -32,11 +33,12 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _subscribedTopics = prefs.getStringList('subscribed_topics') ?? [];
-      
+
       // Ensure 'notes' and 'berita' are in the list if they are default subscribed
       if (!_subscribedTopics.contains('notes')) _subscribedTopics.add('notes');
-      if (!_subscribedTopics.contains('berita')) _subscribedTopics.add('berita');
-      
+      if (!_subscribedTopics.contains('berita'))
+        _subscribedTopics.add('berita');
+
       _saveSubscribedTopics();
     });
   }
@@ -47,38 +49,40 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
   }
 
   Future<void> _toggleSubscription(String topic) async {
+    final loc = AppLocalizations.of(context)!;
     final isSubscribed = _subscribedTopics.contains(topic);
-    
+
     if (isSubscribed) {
       await _fcmService.unsubscribeFromTopic(topic);
       setState(() {
         _subscribedTopics.remove(topic);
       });
-      _showSnackBar('Berhenti berlangganan dari topik: $topic');
+      _showSnackBar(loc.unsubscribedFromTopic(topic));
     } else {
       await _fcmService.subscribeToTopic(topic);
       setState(() {
         _subscribedTopics.add(topic);
       });
-      _showSnackBar('Berhasil berlangganan ke topik: $topic');
+      _showSnackBar(loc.subscribedToTopic(topic));
     }
-    
+
     await _saveSubscribedTopics();
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _subscribeCustomTopic() {
+    final loc = AppLocalizations.of(context)!;
     final topic = _topicController.text.trim();
     if (topic.isNotEmpty) {
       if (!_subscribedTopics.contains(topic)) {
         _toggleSubscription(topic);
       } else {
-        _showSnackBar('Sudah berlangganan ke topik: $topic');
+        _showSnackBar(loc.alreadySubscribed(topic));
       }
       _topicController.clear();
       FocusScope.of(context).unfocus();
@@ -87,20 +91,21 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final otherTopics = _subscribedTopics.where((t) => !_suggestedTopics.contains(t)).toList();
+    final loc = AppLocalizations.of(context)!;
+    final otherTopics = _subscribedTopics
+        .where((t) => !_suggestedTopics.contains(t))
+        .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Langganan Topik'),
-      ),
+      appBar: AppBar(title: Text(loc.subscribeScreenTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Tambah Topik Kustom',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              loc.customTopicTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Row(
@@ -108,10 +113,12 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
                 Expanded(
                   child: TextField(
                     controller: _topicController,
-                    decoration: const InputDecoration(
-                      hintText: 'Misal: hiburan, game',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                    decoration: InputDecoration(
+                      hintText: loc.customTopicHint,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -121,14 +128,14 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text('Langganan'),
+                  child: Text(loc.subscribe),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Saran Topik',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              loc.suggestedTopics,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             ListView.builder(
@@ -138,7 +145,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
               itemBuilder: (context, index) {
                 final topic = _suggestedTopics[index];
                 final isSubscribed = _subscribedTopics.contains(topic);
-                
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
@@ -153,9 +160,12 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             ),
             if (otherTopics.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
-                'Topik Lainnya',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                loc.otherTopics,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -163,7 +173,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
                   itemCount: otherTopics.length,
                   itemBuilder: (context, index) {
                     final topic = otherTopics[index];
-                    
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
